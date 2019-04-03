@@ -8,6 +8,7 @@ import six
 import tensorflow as tf
 from bert import tokenization
 
+
 class InputFeatures(object):
     """A single set of features of data."""
 
@@ -16,6 +17,7 @@ class InputFeatures(object):
                  example_index,
                  doc_span_index,
                  tokens,
+                 token_to_orig_map,
                  token_is_max_context,
                  input_ids,
                  input_mask,
@@ -27,6 +29,7 @@ class InputFeatures(object):
         self.example_index = example_index
         self.doc_span_index = doc_span_index
         self.tokens = tokens
+        self.token_to_orig_map = token_to_orig_map
         self.token_is_max_context = token_is_max_context
         self.input_ids = input_ids
         self.input_mask = input_mask
@@ -39,9 +42,7 @@ class InputFeatures(object):
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
                                  doc_stride, max_query_length, is_training,
                                  output_fn):
-    """Loads a data file into a list of `InputBatch`s.
-    Create InputFeature Object and run callback to save
-    """
+    """Loads a data file into a list of `InputBatch`s."""
 
     unique_id = 1000000000
 
@@ -51,27 +52,30 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
 
-        # tok_to_orig_index = []
-        # orig_to_tok_index = []
-        # all_doc_tokens = []
-        # for (i, token) in enumerate(example.doc_tokens):
-        #     orig_to_tok_index.append(len(all_doc_tokens))
-        #     sub_tokens = tokenizer.tokenize(token)
-        #     for sub_token in sub_tokens:
-        #         tok_to_orig_index.append(i)
-        #         all_doc_tokens.append(sub_token)
+        tok_to_orig_index = []
+        orig_to_tok_index = []
+        all_doc_tokens = []
+        for (i, token) in enumerate(example.doc_tokens):
+            orig_to_tok_index.append(len(all_doc_tokens))
+            sub_tokens = tokenizer.tokenize(token)
+            for sub_token in sub_tokens:
+                tok_to_orig_index.append(i)
+                all_doc_tokens.append(sub_token)
 
-        # tok_start_position = None
-        # tok_end_position = None
-        # if is_training and example.is_impossible:
-        #     tok_start_position = -1
-        #     tok_end_position = -1
-        # if is_training and not example.is_impossible:
-        #     tok_start_position = orig_to_tok_index[example.start_position]
-        #     if example.end_position < len(example.doc_tokens) - 1:
-        #         tok_end_position = orig_to_tok_index[example.end_position + 1] - 1
-        #     else:
-        #         tok_end_position = len(all_doc_tokens) - 1
+        tok_start_position = None
+        tok_end_position = None
+        if is_training and example.is_impossible:
+            tok_start_position = -1
+            tok_end_position = -1
+        if is_training and not example.is_impossible:
+            tok_start_position = orig_to_tok_index[example.start_position]
+            if example.end_position < len(example.doc_tokens) - 1:
+                tok_end_position = orig_to_tok_index[example.end_position + 1] - 1
+            else:
+                tok_end_position = len(all_doc_tokens) - 1
+            (tok_start_position, tok_end_position) = _improve_answer_span(
+                all_doc_tokens, tok_start_position, tok_end_position, tokenizer,
+                example.orig_answer_text)
 
         # The -3 accounts for [CLS], [SEP] and [SEP]
         max_tokens_for_doc = max_seq_length - len(query_tokens) - 3
@@ -83,22 +87,19 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             "DocSpan", ["start", "length"])
         doc_spans = []
         start_offset = 0
-        while start_offset < len(example.doc_tokens):
-            length = len(example.doc_tokens) - start_offset
+        while start_offset < len(all_doc_tokens):
+            length = len(all_doc_tokens) - start_offset
             if length > max_tokens_for_doc:
                 length = max_tokens_for_doc
             doc_spans.append(_DocSpan(start=start_offset, length=length))
-            if start_offset + length == len(example.doc_tokens):
+            if start_offset + length == len(all_doc_tokens):
                 break
             start_offset += min(length, doc_stride)
 
         for (doc_span_index, doc_span) in enumerate(doc_spans):
             tokens = []
-            # token_to_orig_map = {}
+            token_to_orig_map = {}
             token_is_max_context = {}
-            # eg.
-            # tokens => [CLS] This is a Query? [SEP] This is a long context!!! [SEP]
-            # segment_ids => 0 0 0 0 0 0 1 1 1 1 1 1
             segment_ids = []
             tokens.append("[CLS]")
             segment_ids.append(0)
@@ -110,8 +111,12 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
             for i in range(doc_span.length):
                 split_token_index = doc_span.start + i
-                #token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
-                tokens.append(example.doc_tokens[split_token_index])
+                token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
+
+                is_max_context = _check_is_max_context(doc_spans, doc_span_index,
+                                                       split_token_index)
+                token_is_max_context[len(tokens)] = is_max_context
+                tokens.append(all_doc_tokens[split_token_index])
                 segment_ids.append(1)
             tokens.append("[SEP]")
             segment_ids.append(1)
@@ -140,16 +145,16 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 doc_start = doc_span.start
                 doc_end = doc_span.start + doc_span.length - 1
                 out_of_span = False
-                if not (example.start_position >= doc_start and
-                        example.end_position <= doc_end):
+                if not (tok_start_position >= doc_start and
+                        tok_end_position <= doc_end):
                     out_of_span = True
                 if out_of_span:
                     start_position = 0
                     end_position = 0
                 else:
                     doc_offset = len(query_tokens) + 2
-                    start_position = example.start_position - doc_start + doc_offset
-                    end_position = example.end_position - doc_start + doc_offset
+                    start_position = tok_start_position - doc_start + doc_offset
+                    end_position = tok_end_position - doc_start + doc_offset
 
             if is_training and example.is_impossible:
                 start_position = 0
@@ -162,6 +167,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 tf.logging.info("doc_span_index: %s" % (doc_span_index))
                 tf.logging.info("tokens: %s" % " ".join(
                     [tokenization.printable_text(x) for x in tokens]))
+                tf.logging.info("token_to_orig_map: %s" % " ".join(
+                    ["%d:%d" % (x, y) for (x, y) in six.iteritems(token_to_orig_map)]))
                 tf.logging.info("token_is_max_context: %s" % " ".join([
                     "%d:%s" % (x, y) for (x, y) in six.iteritems(token_is_max_context)
                 ]))
@@ -173,7 +180,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 if is_training and example.is_impossible:
                     tf.logging.info("impossible example")
                 if is_training and not example.is_impossible:
-                    answer_text = " ".join(tokens[start_position:end_position])
+                    answer_text = " ".join(tokens[start_position:(end_position + 1)])
                     tf.logging.info("start_position: %d" % (start_position))
                     tf.logging.info("end_position: %d" % (end_position))
                     tf.logging.info(
@@ -184,6 +191,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 example_index=example_index,
                 doc_span_index=doc_span_index,
                 tokens=tokens,
+                token_to_orig_map=token_to_orig_map,
                 token_is_max_context=token_is_max_context,
                 input_ids=input_ids,
                 input_mask=input_mask,
@@ -191,12 +199,86 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 start_position=start_position,
                 end_position=end_position,
                 is_impossible=example.is_impossible)
-            
-            #print(tokens[start_position:end_position], example.orig_answer_text)
+
             # Run callback
             output_fn(feature)
 
             unique_id += 1
+
+
+def _improve_answer_span(doc_tokens, input_start, input_end, tokenizer,
+                         orig_answer_text):
+    """Returns tokenized answer spans that better match the annotated answer."""
+
+    # The SQuAD annotations are character based. We first project them to
+    # whitespace-tokenized words. But then after WordPiece tokenization, we can
+    # often find a "better match". For example:
+    #
+    #   Question: What year was John Smith born?
+    #   Context: The leader was John Smith (1895-1943).
+    #   Answer: 1895
+    #
+    # The original whitespace-tokenized answer will be "(1895-1943).". However
+    # after tokenization, our tokens will be "( 1895 - 1943 ) .". So we can match
+    # the exact answer, 1895.
+    #
+    # However, this is not always possible. Consider the following:
+    #
+    #   Question: What country is the top exporter of electornics?
+    #   Context: The Japanese electronics industry is the lagest in the world.
+    #   Answer: Japan
+    #
+    # In this case, the annotator chose "Japan" as a character sub-span of
+    # the word "Japanese". Since our WordPiece tokenizer does not split
+    # "Japanese", we just use "Japanese" as the annotation. This is fairly rare
+    # in SQuAD, but does happen.
+    tok_answer_text = " ".join(tokenizer.tokenize(orig_answer_text))
+
+    for new_start in range(input_start, input_end + 1):
+        for new_end in range(input_end, new_start - 1, -1):
+            text_span = " ".join(doc_tokens[new_start:(new_end + 1)])
+            if text_span == tok_answer_text:
+                return (new_start, new_end)
+
+    return (input_start, input_end)
+
+
+def _check_is_max_context(doc_spans, cur_span_index, position):
+    """Check if this is the 'max context' doc span for the token."""
+
+    # Because of the sliding window approach taken to scoring documents, a single
+    # token can appear in multiple documents. E.g.
+    #  Doc: the man went to the store and bought a gallon of milk
+    #  Span A: the man went to the
+    #  Span B: to the store and bought
+    #  Span C: and bought a gallon of
+    #  ...
+    #
+    # Now the word 'bought' will have two scores from spans B and C. We only
+    # want to consider the score with "maximum context", which we define as
+    # the *minimum* of its left and right context (the *sum* of left and
+    # right context will always be the same, of course).
+    #
+    # In the example the maximum context for 'bought' would be span C since
+    # it has 1 left context and 3 right context, while span B has 4 left context
+    # and 0 right context.
+    best_score = None
+    best_span_index = None
+    for (span_index, doc_span) in enumerate(doc_spans):
+        end = doc_span.start + doc_span.length - 1
+        if position < doc_span.start:
+            continue
+        if position > end:
+            continue
+        num_left_context = position - doc_span.start
+        num_right_context = end - position
+        score = min(num_left_context, num_right_context) + 0.01 * doc_span.length
+        if best_score is None or score > best_score:
+            best_score = score
+            best_span_index = span_index
+
+    return cur_span_index == best_span_index
+
 
 def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
     """Creates an `input_fn` closure to be passed to TPUEstimator."""
@@ -247,6 +329,7 @@ def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
 
     return input_fn
 
+
 class FeatureWriter(object):
     """Writes InputFeature to TF example file."""
 
@@ -284,4 +367,3 @@ class FeatureWriter(object):
 
     def close(self):
         self._writer.close()
-

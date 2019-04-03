@@ -10,7 +10,7 @@
 ### 技术
 - Pre-training
 - self attention
-- word embedding (word2vec ELMo Glove BERT)
+- word embedding (word2vec Glove ELMo GPT BERT)
 - word segment
 
 ### 问题
@@ -79,6 +79,9 @@ BERT+
 ### 比赛
 - 2018机器阅读理解技术竞赛
     + Baseline: Match-LSTM 和 BiDAF(Dynatic Attention Flow)
+- cmrc2018
+- DuReader
+- SQUAD1.1/2.0
 
 ### 应用
 - 问答系统

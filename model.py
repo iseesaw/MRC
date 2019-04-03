@@ -5,7 +5,6 @@
 import tensorflow as tf
 from bert import modeling, optimization
 
-
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  use_one_hot_embeddings):
     """Creates a classification model."""
@@ -141,3 +140,4 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
         return output_spec
 
     return model_fn
+

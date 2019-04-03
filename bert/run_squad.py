@@ -237,7 +237,7 @@ def read_squad_examples(input_file, is_training):
   examples = []
   for entry in input_data:
     for paragraph in entry["paragraphs"]:
-      paragraph_text = paragraph["context"]
+      paragraph_text = " ".join(paragraph["context"])
       doc_tokens = []
       char_to_word_offset = []
       prev_is_whitespace = True
@@ -254,7 +254,7 @@ def read_squad_examples(input_file, is_training):
 
       for qa in paragraph["qas"]:
         qas_id = qa["id"]
-        question_text = qa["question"]
+        question_text = " ".join(qa["question"])
         start_position = None
         end_position = None
         orig_answer_text = None
@@ -268,12 +268,16 @@ def read_squad_examples(input_file, is_training):
                 "For training, each question should have exactly 1 answer.")
           if not is_impossible:
             answer = qa["answers"][0]
-            orig_answer_text = answer["text"]
-            answer_offset = answer["answer_start"]
+            orig_answer_text = " ".join(answer["text"])
+            answer_offset = answer["answer_start"]*2
             answer_length = len(orig_answer_text)
             start_position = char_to_word_offset[answer_offset]
-            end_position = char_to_word_offset[answer_offset + answer_length -
-                                               1]
+            try:
+            
+                end_position = char_to_word_offset[answer_offset + answer_length - 1]
+            except:
+                print("wrong... qas_id: {}, question_text: {}".format(qas_id, question_text))
+                continue
             # Only add answers where the text can be exactly recovered from the
             # document. If this CAN'T happen it's likely due to weird Unicode
             # stuff so we will just skip the example.
@@ -284,6 +288,7 @@ def read_squad_examples(input_file, is_training):
                 doc_tokens[start_position:(end_position + 1)])
             cleaned_answer_text = " ".join(
                 tokenization.whitespace_tokenize(orig_answer_text))
+            #print(actual_text, cleaned_answer_text)
             if actual_text.find(cleaned_answer_text) == -1:
               tf.logging.warning("Could not find answer: '%s' vs. '%s'",
                                  actual_text, cleaned_answer_text)
@@ -1277,7 +1282,4 @@ def main(_):
 
 
 if __name__ == "__main__":
-  flags.mark_flag_as_required("vocab_file")
-  flags.mark_flag_as_required("bert_config_file")
-  flags.mark_flag_as_required("output_dir")
   tf.app.run()
