@@ -1,0 +1,78 @@
+\begin{thebibliography}{10}
+
+\bibitem{squad}
+Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, and Percy Liang.
+\newblock Squad: 100,000+ questions for machine comprehension of text.
+\newblock {\em arXiv preprint arXiv:1606.05250}, 2016.
+
+\bibitem{teaching}
+Karl~Moritz Hermann, Tomas Kocisky, Edward Grefenstette, Lasse Espeholt, Will
+  Kay, Mustafa Suleyman, and Phil Blunsom.
+\newblock Teaching machines to read and comprehend.
+\newblock In {\em Advances in neural information processing systems}, pages
+  1693--1701, 2015.
+
+\bibitem{bidaf}
+Minjoon Seo, Aniruddha Kembhavi, Ali Farhadi, and Hannaneh Hajishirzi.
+\newblock Bidirectional attention flow for machine comprehension.
+\newblock {\em arXiv preprint arXiv:1611.01603}, 2016.
+
+\bibitem{rnet}
+W~Wang, N~Yang, F~Wei, B~Chang, and M~Zhou.
+\newblock R-net: Machine reading comprehension with self-matching networks.
+\newblock {\em Natural Lang. Comput. Group, Microsoft Res. Asia, Beijing,
+  China, Tech. Rep}, 5, 2017.
+
+\bibitem{qanet}
+Adams~Wei Yu, David Dohan, Minh-Thang Luong, Rui Zhao, Kai Chen, Mohammad
+  Norouzi, and Quoc~V Le.
+\newblock Qanet: Combining local convolution with global self-attention for
+  reading comprehension.
+\newblock {\em arXiv preprint arXiv:1804.09541}, 2018.
+
+\bibitem{bert}
+Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova.
+\newblock Bert: Pre-training of deep bidirectional transformers for language
+  understanding.
+\newblock {\em arXiv preprint arXiv:1810.04805}, 2018.
+
+\bibitem{cmrc}
+Yiming Cui, Ting Liu, Zhipeng Chen, Wentao Ma, Shijin Wang, and Guoping Hu.
+\newblock Dataset for the first evaluation on chinese machine reading
+  comprehension.
+\newblock {\em arXiv preprint arXiv:1709.08299}, 2017.
+
+\bibitem{eda}
+Jason~W Wei and Kai Zou.
+\newblock Eda: Easy data augmentation techniques for boosting performance on
+  text classification tasks.
+\newblock {\em arXiv preprint arXiv:1901.11196}, 2019.
+
+\bibitem{sogou}
+搜狗机器翻译.
+\newblock 深智引擎.
+\newblock \url{https://deepi.sogou.com/}.
+
+\bibitem{youdao}
+有道机器翻译.
+\newblock 有道智云.
+\newblock \url{https://ai.youdao.com/gw.s}.
+
+\bibitem{squad2.0}
+Stanford~NLP Group.
+\newblock Squad2.0, the stanford question answering dataset.
+\newblock \url{https://rajpurkar.github.io/SQuAD-explorer/}.
+\newblock 2019.
+
+\bibitem{cui2016attention}
+Yiming Cui, Zhipeng Chen, Si~Wei, Shijin Wang, Ting Liu, and Guoping Hu.
+\newblock Attention-over-attention neural networks for reading comprehension.
+\newblock {\em arXiv preprint arXiv:1607.04423}, 2016.
+
+\bibitem{ernie}
+Baidu Paddle~Paddle.
+\newblock Ernie.
+\newblock \url{https://github.com/PaddlePaddle/LARK/tree/develop/ERNIE}.
+\newblock 2019.
+
+\end{thebibliography}

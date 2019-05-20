@@ -1,13 +1,12 @@
 ### MRC
-基于Bert的机器阅读理解项目  
-数据集：mrc2018 
+>中文信息处理前沿专题课程项目
+基于Bert的机器阅读理解, 主要使用BERT+R-net模型, 数据集为cmrc2017/18  
 
 - mrc_bert
     + bert baseline
-    + bert + PointerNet/self-attention/context-to-query
+    + bert + R-net
 - mrc_gui
     + QA交互界面
     + 语音识别 + 语音合成
 
-
-$$L_{j o i n t}=-\log \left(\frac{(1-\delta) e^{z}+\delta e^{\alpha_{a} \beta_{b}}}{e^{z}+\sum_{i=1}^{l_{p}} \sum_{j=1}^{l_{p}} e^{\alpha_{i} \beta_{j}} )}\right) $$
+详见[report/document](report/document.pdf)
