@@ -4,7 +4,8 @@
 
 - mrc_bert
     + bert baseline
-    + bert + R-net
+- mrc_bert_plus
+    + bert + r-net
 - mrc_gui
     + QA交互界面
     + 语音识别 + 语音合成
